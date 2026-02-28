@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --bs-primary: #4338ca;
+    --bs-primary-rgb: 67, 56, 202;
+    --bs-secondary: #6b7280;
+    --bs-success: #10b981;
+    --bs-danger: #ef4444;
+    --bs-warning: #f59e0b;
+    --bs-info: #3b82f6;
+    --bs-dark: #111827;
+    --bs-light: #f9fafb;
+    --bs-body-bg: #f3f4f6;
+    --bs-body-color: #374151;
+    --bs-link-color: #4338ca;
+    --bs-link-hover-color: #312e81;
+    --bs-font-sans-serif: 'Inter', system-ui, -apple-system, sans-serif;
+    --bs-body-font-family: var(--bs-font-sans-serif);
+    --bs-border-radius: 0.75rem;
+    --bs-border-radius-lg: 1rem;
+    --bs-border-radius-sm: 0.5rem;
+}
+
+body {
+    font-family: var(--bs-body-font-family);
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Premium Card Styling */
+.card {
+    border: none !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    background: #ffffff;
+}
+
+.hover-shadow:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Premium Button Styling */
+.btn {
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1.25rem !important;
+    transition: all 0.2s ease !important;
+    letter-spacing: 0.01em;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn-primary {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 4px 6px -1px rgba(67, 56, 202, 0.3) !important;
+}
+
+.btn-primary:hover {
+    background-color: #3730a3 !important;
+    border-color: #3730a3 !important;
+    box-shadow: 0 6px 12px -2px rgba(67, 56, 202, 0.4) !important;
+}
+
+.btn-success {
+    background-color: var(--bs-success) !important;
+    border-color: var(--bs-success) !important;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3) !important;
+}
+
+.btn-success:hover {
+    background-color: #059669 !important;
+    border-color: #059669 !important;
+    box-shadow: 0 6px 12px -2px rgba(16, 185, 129, 0.4) !important;
+}
+
+.btn-outline-primary {
+    color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--bs-primary) !important;
+    color: white !important;
+}
+
+/* Badges */
+.badge {
+    font-weight: 600 !important;
+    padding: 0.4em 0.8em !important;
+    border-radius: 6px !important;
+    letter-spacing: 0.02em;
+}
+
+.badge.bg-success {
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+}
+
+.badge.bg-danger {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+.badge.bg-warning {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+}
+
+/* Navbar Premium Styling */
+.navbar {
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.navbar-brand {
+    font-size: 1.5rem !important;
+    letter-spacing: -0.05em;
+    background: linear-gradient(135deg, #4338ca, #3b82f6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--bs-dark);
+    letter-spacing: -0.02em;
+    font-weight: 700;
+}
+
+/* Inputs */
+.form-control,
+.form-select {
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 0 0 4px rgba(67, 56, 202, 0.1) !important;
+}
+
+/* Utilities */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.transition-colors {
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}

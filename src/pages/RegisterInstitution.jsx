@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 
-export default function Register() {
+export default function RegisterInstitution() {
     const [formData, setFormData] = useState({
         username: '',
         email: '',
         password: '',
-        role: 'STUDENT',
-        enrollment_number: ''
+        role: 'INSTITUTION',
+        institution_name: '',
+        institution_address: '',
+        institution_phone: '',
+        institution_website: ''
     });
     const [error, setError] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
@@ -33,11 +36,11 @@ export default function Register() {
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center mb-6">
                     <div className="bg-primary p-2 rounded-xl text-white shadow-lg shadow-primary/20">
-                        <span className="material-symbols-outlined text-4xl">how_to_reg</span>
+                        <span className="material-symbols-outlined text-4xl">apartment</span>
                     </div>
                 </div>
                 <h2 className="text-center text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                    Create your account
+                    Register your Institution
                 </h2>
                 <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
                     Already have an account? <Link to="/login" className="font-semibold text-primary hover:text-primary/80 transition-colors">Sign in here</Link>
@@ -55,7 +58,19 @@ export default function Register() {
 
                     <form className="space-y-5" onSubmit={handleSubmit}>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Institution Name</label>
+                            <input
+                                type="text"
+                                name="institution_name"
+                                required
+                                onChange={handleChange}
+                                className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                                placeholder="e.g. Oxford University"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Admin Username</label>
                             <input
                                 type="text"
                                 name="username"
@@ -67,14 +82,14 @@ export default function Register() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Official Email Address</label>
                             <input
                                 type="email"
                                 name="email"
                                 required
                                 onChange={handleChange}
                                 className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
-                                placeholder="you@example.com"
+                                placeholder="admin@institution.edu"
                             />
                         </div>
 
@@ -101,17 +116,39 @@ export default function Register() {
                             </div>
                         </div>
 
-
-
-                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Enrollment Number</label>
-                            <input
-                                type="text"
-                                name="enrollment_number"
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Institution Address</label>
+                            <textarea
+                                name="institution_address"
+                                rows="2"
                                 onChange={handleChange}
-                                className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
-                                placeholder="Optional"
+                                className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors resize-none"
+                                placeholder="Full postal address"
                             />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+                                <input
+                                    type="tel"
+                                    name="institution_phone"
+                                    onChange={handleChange}
+                                    className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                                    placeholder="+1 234 567 890"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Website</label>
+                                <input
+                                    type="url"
+                                    name="institution_website"
+                                    onChange={handleChange}
+                                    className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                                    placeholder="https://institution.edu"
+                                />
+                            </div>
                         </div>
 
                         <div className="pt-2">
@@ -119,7 +156,7 @@ export default function Register() {
                                 type="submit"
                                 className="flex w-full justify-center rounded-xl border border-transparent bg-primary py-3 px-4 text-sm font-bold text-white shadow-md shadow-primary/20 hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all hover:scale-[1.02]"
                             >
-                                Register Account
+                                Register Institution
                             </button>
                         </div>
                     </form>

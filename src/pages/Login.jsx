@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 import api from '../api/axios';
 
 export default function Login() {
@@ -18,7 +19,12 @@ export default function Login() {
             const response = await api.post('token/', credentials);
             localStorage.setItem('access', response.data.access);
             localStorage.setItem('refresh', response.data.refresh);
-            navigate('/dashboard');
+            const decoded = jwtDecode(response.data.access);
+            if (decoded.role === 'INSTITUTION') {
+                navigate('/institution');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err) {
             setError('Invalid credentials');
         }
@@ -37,6 +43,9 @@ export default function Login() {
                 </h2>
                 <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
                     Or <Link to="/register" className="font-semibold text-primary hover:text-primary/80 transition-colors">create a new account</Link>
+                </p>
+                <p className="mt-1 text-center text-sm text-slate-600 dark:text-slate-400">
+                    <Link to="/register-institution" className="font-semibold text-primary hover:text-primary/80 transition-colors">Register as an Institution</Link>
                 </p>
             </div>
 

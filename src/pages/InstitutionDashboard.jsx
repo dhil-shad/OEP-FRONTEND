@@ -29,6 +29,7 @@ export default function InstitutionDashboard() {
     const [inviteStatus, setInviteStatus] = useState(null);
     const [newDept, setNewDept] = useState({ name: '', description: '' });
     const [deptStatus, setDeptStatus] = useState(null);
+    const [requestFilter, setRequestFilter] = useState('STUDENT'); // 'STUDENT' or 'INSTRUCTOR'
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -233,15 +234,28 @@ export default function InstitutionDashboard() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {departments.map(dept => (
-                                    <div key={dept.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6 shadow-sm hover:shadow-md transition-all group relative">
+                                    <div
+                                        key={dept.id}
+                                        onClick={() => navigate(`/institution/departments/${dept.id}`)}
+                                        className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-6 shadow-sm hover:shadow-xl hover:scale-[1.02] cursor-pointer transition-all group relative"
+                                    >
                                         <button
-                                            onClick={() => handleDeleteDepartment(dept.id)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteDepartment(dept.id);
+                                            }}
                                             className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
                                         >
                                             <span className="material-symbols-outlined text-lg">delete</span>
                                         </button>
-                                        <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-4">
-                                            <span className="material-symbols-outlined">domain</span>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                                                <span className="material-symbols-outlined">domain</span>
+                                            </div>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sections</span>
+                                                <span className="text-lg font-black text-primary">{dept.sections_count || 0}</span>
+                                            </div>
                                         </div>
                                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{dept.name}</h3>
                                         <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2 mb-4">
@@ -455,7 +469,7 @@ export default function InstitutionDashboard() {
                                             <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
                                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Student Name</th>
                                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Enrollment ID</th>
-                                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Department</th>
+                                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Dept / Section / Class</th>
                                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Email</th>
                                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                                             </tr>
@@ -477,10 +491,20 @@ export default function InstitutionDashboard() {
                                                         </code>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                                            <span className="material-symbols-outlined text-[14px]">domain</span>
-                                                            {student.department || 'General'}
-                                                        </span>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                                                <span className="material-symbols-outlined text-[14px]">domain</span>
+                                                                {student.department_name || student.department || 'General'}
+                                                            </span>
+                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-slate-50 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400">
+                                                                <span className="material-symbols-outlined text-[14px]">layers</span>
+                                                                {student.section_name || student.section || 'N/A'}
+                                                            </span>
+                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                                                <span className="material-symbols-outlined text-[14px]">class</span>
+                                                                {student.study_class_name || 'N/A'}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                                                         {student.email}
@@ -529,12 +553,31 @@ export default function InstitutionDashboard() {
                 {/* ─── JOIN REQUESTS TAB ─── */}
                 {activeTab === 'requests' && (
                     <div>
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-1">Student Join Requests</h2>
-                            <p className="text-slate-500 dark:text-slate-400">Review and approve accounts wanting to link to your institution.</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                            <div>
+                                <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-1">Join Requests</h2>
+                                <p className="text-slate-500 dark:text-slate-400">Review and approve accounts wanting to link to your institution.</p>
+                            </div>
+
+                            <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl w-fit">
+                                <button
+                                    onClick={() => setRequestFilter('STUDENT')}
+                                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 ${requestFilter === 'STUDENT' ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                >
+                                    <span className="material-symbols-outlined text-sm">groups</span>
+                                    Students
+                                </button>
+                                <button
+                                    onClick={() => setRequestFilter('INSTRUCTOR')}
+                                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 ${requestFilter === 'INSTRUCTOR' ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                >
+                                    <span className="material-symbols-outlined text-sm">school</span>
+                                    Instructors
+                                </button>
+                            </div>
                         </div>
 
-                        {requests.length === 0 ? (
+                        {requests.filter(r => r.student_role === requestFilter).length === 0 ? (
                             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm text-center py-16">
                                 <div className="w-16 h-16 bg-slate-100 dark:bg-slate-900 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <span className="material-symbols-outlined text-3xl">inbox</span>
@@ -547,15 +590,26 @@ export default function InstitutionDashboard() {
                         ) : (
                             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
                                 <ul className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    {requests.map(req => (
+                                    {requests.filter(r => r.student_role === requestFilter).map(req => (
                                         <li key={req.id} className="p-4 sm:px-6 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-between gap-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center shrink-0">
-                                                    <span className="material-symbols-outlined">person</span>
+                                                    <span className="material-symbols-outlined">{req.student_role === 'STUDENT' ? 'person' : 'school'}</span>
                                                 </div>
                                                 <div>
                                                     <div className="font-bold text-slate-900 dark:text-white text-lg">{req.student_name}</div>
-                                                    <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Enrollment: <span className="text-slate-700 dark:text-slate-300">{req.enrollment_number}</span></div>
+                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                        <span className="text-xs font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full">{req.department_name}</span>
+                                                        {req.student_role === 'STUDENT' && (
+                                                            <>
+                                                                <span className="text-xs font-bold px-2 py-0.5 bg-slate-50 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400 rounded-full">{req.section_name}</span>
+                                                                <span className="text-xs font-bold px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full">{req.study_class_name}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    {req.student_role === 'STUDENT' && (
+                                                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Enrollment: <span className="text-slate-700 dark:text-slate-300">{req.enrollment_number}</span></div>
+                                                    )}
                                                     <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                                                         Requested: {new Date(req.created_at).toLocaleDateString()}
                                                     </div>

@@ -7,8 +7,15 @@ export default function JoinInstitution() {
     const [enrollment, setEnrollment] = useState('');
     const [departments, setDepartments] = useState([]);
     const [selectedDept, setSelectedDept] = useState('');
+    const [sections, setSections] = useState([]);
+    const [selectedSection, setSelectedSection] = useState('');
+    const [classes, setClasses] = useState([]);
+    const [selectedClass, setSelectedClass] = useState('');
+    const [joinMode, setJoinMode] = useState('STUDENT'); // 'STUDENT' or 'INSTRUCTOR'
     const [loading, setLoading] = useState(false);
     const [fetchingDepts, setFetchingDepts] = useState(false);
+    const [fetchingSections, setFetchingSections] = useState(false);
+    const [fetchingClasses, setFetchingClasses] = useState(false);
     const [status, setStatus] = useState(null);
     const navigate = useNavigate();
 
@@ -37,10 +44,52 @@ export default function JoinInstitution() {
         }
     }, [uid]);
 
+    useEffect(() => {
+        if (selectedDept) {
+            setFetchingSections(true);
+            api.get(`users/public/departments/${selectedDept}/sections/`)
+                .then(res => {
+                    setSections(res.data);
+                    setSelectedSection('');
+                })
+                .catch(err => {
+                    console.error("Failed to fetch sections", err);
+                    setSections([]);
+                })
+                .finally(() => setFetchingSections(false));
+        } else {
+            setSections([]);
+            setSelectedSection('');
+        }
+    }, [selectedDept]);
+
+    useEffect(() => {
+        if (selectedSection) {
+            setFetchingClasses(true);
+            api.get(`users/public/sections/${selectedSection}/classes/`)
+                .then(res => {
+                    setClasses(res.data);
+                    setSelectedClass('');
+                })
+                .catch(err => {
+                    console.error("Failed to fetch classes", err);
+                    setClasses([]);
+                })
+                .finally(() => setFetchingClasses(false));
+        } else {
+            setClasses([]);
+            setSelectedClass('');
+        }
+    }, [selectedSection]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!selectedDept) {
-            setStatus({ type: 'error', message: 'Please select a department.' });
+
+        const isStudent = joinMode === 'STUDENT';
+        if (!selectedDept || (isStudent && !selectedSection)) {
+            setStatus({ type: 'error', message: `Please select both department and ${isStudent ? 'section' : 'other fields'}.` });
+            if (!selectedDept) setStatus({ type: 'error', message: 'Please select a department.' });
+            else if (isStudent && !selectedSection) setStatus({ type: 'error', message: 'Please select a section.' });
             return;
         }
 
@@ -50,14 +99,21 @@ export default function JoinInstitution() {
         try {
             await api.post('users/join-institution/', {
                 code: uid,
-                enrollment_number: enrollment,
-                department: selectedDept
+                role: joinMode,
+                enrollment_number: joinMode === 'STUDENT' ? enrollment : '',
+                department: selectedDept,
+                section: joinMode === 'STUDENT' ? selectedSection : null,
+                study_class: joinMode === 'STUDENT' ? selectedClass : null
             });
-            setStatus({ type: 'success', message: 'Your join request has been sent! Waiting for institution approval.' });
+            setStatus({ type: 'success', message: `Your ${joinMode.toLowerCase()} join request has been sent! Waiting for institution approval.` });
             setUid('');
             setEnrollment('');
             setSelectedDept('');
+            setSelectedSection('');
+            setSelectedClass('');
             setDepartments([]);
+            setSections([]);
+            setClasses([]);
         } catch (err) {
             setStatus({ type: 'error', message: err.response?.data?.detail || 'Failed to send join request.' });
         } finally {
@@ -78,8 +134,27 @@ export default function JoinInstitution() {
                 <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700 mt-4 overflow-hidden">
                     <div className="px-8 pt-12 pb-8">
                         <h2 className="text-2xl font-black text-center text-slate-900 dark:text-white mb-2">Join Institution</h2>
+
+                        <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1 rounded-xl mb-6">
+                            <button
+                                onClick={() => setJoinMode('STUDENT')}
+                                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${joinMode === 'STUDENT' ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                            >
+                                As Student
+                            </button>
+                            <button
+                                onClick={() => setJoinMode('INSTRUCTOR')}
+                                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${joinMode === 'INSTRUCTOR' ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                            >
+                                As Instructor
+                            </button>
+                        </div>
+
                         <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-8">
-                            Link your student account to your institution by providing your institution code and roll number.
+                            {joinMode === 'STUDENT'
+                                ? "Link your student account to your institution by providing your institution code and roll number."
+                                : "Join an institution as an instructor to start managing courses and conducting exams."
+                            }
                         </p>
 
                         {status && (
@@ -109,19 +184,21 @@ export default function JoinInstitution() {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                                    Enrollment / Admission Number
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={enrollment}
-                                    onChange={(e) => setEnrollment(e.target.value.toUpperCase())}
-                                    className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm bg-background-light dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
-                                    placeholder="Enter your student ID or roll number"
-                                />
-                            </div>
+                            {joinMode === 'STUDENT' && (
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                                        Enrollment / Admission Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={enrollment}
+                                        onChange={(e) => setEnrollment(e.target.value.toUpperCase())}
+                                        className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm bg-background-light dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                                        placeholder="Enter your student ID or roll number"
+                                    />
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
@@ -146,9 +223,59 @@ export default function JoinInstitution() {
                                 </div>
                             </div>
 
+                            {joinMode === 'STUDENT' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                                            Select Section
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                required
+                                                disabled={sections.length === 0}
+                                                value={selectedSection}
+                                                onChange={(e) => setSelectedSection(e.target.value)}
+                                                className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm bg-background-light dark:bg-slate-900 text-slate-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <option value="">{fetchingSections ? 'Fetching sections...' : sections.length > 0 ? 'Choose a section' : 'Select a department first'}</option>
+                                                {sections.map(sec => (
+                                                    <option key={sec.id} value={sec.id}>{sec.name}</option>
+                                                ))}
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                                                <span className="material-symbols-outlined shrink-0 text-xl">expand_more</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                                            Select Class
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                required
+                                                disabled={classes.length === 0}
+                                                value={selectedClass}
+                                                onChange={(e) => setSelectedClass(e.target.value)}
+                                                className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm bg-background-light dark:bg-slate-900 text-slate-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <option value="">{fetchingClasses ? 'Fetching classes...' : classes.length > 0 ? 'Choose a class' : 'Select a section first'}</option>
+                                                {classes.map(cls => (
+                                                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                                                ))}
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                                                <span className="material-symbols-outlined shrink-0 text-xl">expand_more</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
                             <button
                                 type="submit"
-                                disabled={loading || !uid || !enrollment || !selectedDept}
+                                disabled={loading || !uid || (joinMode === 'STUDENT' && (!enrollment || !selectedDept || !selectedSection || !selectedClass)) || (joinMode === 'INSTRUCTOR' && !selectedDept)}
                                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3.5 px-4 rounded-xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 mt-4"
                             >
                                 {loading ? (

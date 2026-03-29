@@ -15,6 +15,8 @@ import GradeSubmission from './pages/GradeSubmission'
 import JoinExam from './pages/JoinExam'
 import JoinInstitution from './pages/JoinInstitution'
 import Profile from './pages/Profile'
+import DepartmentDetails from './pages/DepartmentDetails'
+import SectionDetails from './pages/SectionDetails'
 import './App.css'
 
 function App() {
@@ -30,6 +32,8 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/register-institution" element={<RegisterInstitution />} />
         <Route path="/institution" element={<InstitutionDashboard />} />
+        <Route path="/institution/departments/:id" element={<DepartmentDetails />} />
+        <Route path="/institution/sections/:id" element={<SectionDetails />} />
         <Route path="/dashboard" element={<ExamDashboard />} />
         <Route path="/exams/create" element={<CreateExam />} />
         <Route path="/exams/:id" element={<ManageExam />} />

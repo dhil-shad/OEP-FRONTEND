@@ -89,7 +89,17 @@ export default function Profile() {
                                     <DetailCard
                                         icon="school"
                                         label="Department"
-                                        value={profile.department || "General"}
+                                        value={profile.department_name || profile.department || "General"}
+                                    />
+                                    <DetailCard
+                                        icon="layers"
+                                        label="Section"
+                                        value={profile.section_name || profile.section || "N/A"}
+                                    />
+                                    <DetailCard
+                                        icon="class"
+                                        label="Class"
+                                        value={profile.study_class_name || "N/A"}
                                     />
                                 </>
                             )}

@@ -22,6 +22,8 @@ export default function JoinInstitution() {
     useEffect(() => {
         if (uid.length === 8) {
             setFetchingDepts(true);
+            setDepartments([]);
+            setSelectedDept('');
             api.get(`users/public/institutions/${uid}/departments/`)
                 .then(res => {
                     setDepartments(res.data);
@@ -35,6 +37,7 @@ export default function JoinInstitution() {
                 .catch(err => {
                     console.error("Failed to fetch departments", err);
                     setDepartments([]);
+                    setSelectedDept('');
                     setStatus({ type: 'error', message: 'Invalid institution code or no departments available.' });
                 })
                 .finally(() => setFetchingDepts(false));
@@ -86,10 +89,11 @@ export default function JoinInstitution() {
         e.preventDefault();
 
         const isStudent = joinMode === 'STUDENT';
-        if (!selectedDept || (isStudent && !selectedSection)) {
-            setStatus({ type: 'error', message: `Please select both department and ${isStudent ? 'section' : 'other fields'}.` });
+        if (!selectedDept || (isStudent && (!selectedSection || !selectedClass))) {
+            setStatus({ type: 'error', message: `Please select all required fields.` });
             if (!selectedDept) setStatus({ type: 'error', message: 'Please select a department.' });
             else if (isStudent && !selectedSection) setStatus({ type: 'error', message: 'Please select a section.' });
+            else if (isStudent && !selectedClass) setStatus({ type: 'error', message: 'Please select a class.' });
             return;
         }
 
@@ -212,7 +216,7 @@ export default function JoinInstitution() {
                                         onChange={(e) => setSelectedDept(e.target.value)}
                                         className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm bg-background-light dark:bg-slate-900 text-slate-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <option value="">{fetchingDepts ? 'Fetching departments...' : departments.length > 0 ? 'Choose a department' : 'Enter a valid UID first'}</option>
+                                        <option value="">{fetchingDepts ? 'Fetching departments...' : departments.length > 0 ? 'Choose a department' : (uid.length === 8 ? 'No departments available' : 'Enter a valid UID first')}</option>
                                         {departments.map(dept => (
                                             <option key={dept.id} value={dept.id}>{dept.name}</option>
                                         ))}
@@ -237,7 +241,7 @@ export default function JoinInstitution() {
                                                 onChange={(e) => setSelectedSection(e.target.value)}
                                                 className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm bg-background-light dark:bg-slate-900 text-slate-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                <option value="">{fetchingSections ? 'Fetching sections...' : sections.length > 0 ? 'Choose a section' : 'Select a department first'}</option>
+                                                <option value="">{fetchingSections ? 'Fetching sections...' : sections.length > 0 ? 'Choose a section' : (selectedDept ? 'No sections available' : 'Select a department first')}</option>
                                                 {sections.map(sec => (
                                                     <option key={sec.id} value={sec.id}>{sec.name}</option>
                                                 ))}
@@ -260,7 +264,7 @@ export default function JoinInstitution() {
                                                 onChange={(e) => setSelectedClass(e.target.value)}
                                                 className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm bg-background-light dark:bg-slate-900 text-slate-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                <option value="">{fetchingClasses ? 'Fetching classes...' : classes.length > 0 ? 'Choose a class' : 'Select a section first'}</option>
+                                                <option value="">{fetchingClasses ? 'Fetching classes...' : classes.length > 0 ? 'Choose a class' : (selectedSection ? 'No classes available' : 'Select a section first')}</option>
                                                 {classes.map(cls => (
                                                     <option key={cls.id} value={cls.id}>{cls.name}</option>
                                                 ))}

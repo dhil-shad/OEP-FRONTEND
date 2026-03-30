@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -18,9 +18,47 @@ export default function CreateExam() {
             screen_record_enabled: false,
             full_screen_enforced: true,
             tolerance_count: 3
-        }
+        },
+        section: '',
+        study_class: ''
     });
+    const [sections, setSections] = useState([]);
+    const [classes, setClasses] = useState([]);
+    const [userProfile, setUserProfile] = useState(null);
     const [error, setError] = useState(null);
+
+    useEffect(() => {
+        // Fetch user profile to get department ID
+        api.get('users/profile/')
+            .then(res => {
+                setUserProfile(res.data);
+                if (res.data.department) {
+                    fetchSections(res.data.department);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to fetch profile", err);
+                setError("Could not load user profile.");
+            });
+    }, []);
+
+    const fetchSections = async (deptId) => {
+        try {
+            const res = await api.get(`users/sections/?department_id=${deptId}`);
+            setSections(res.data);
+        } catch (err) {
+            console.error("Failed to fetch sections", err);
+        }
+    };
+
+    const fetchClasses = async (sectionId) => {
+        try {
+            const res = await api.get(`users/classes/?section_id=${sectionId}`);
+            setClasses(res.data);
+        } catch (err) {
+            console.error("Failed to fetch classes", err);
+        }
+    };
 
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -32,6 +70,11 @@ export default function CreateExam() {
             });
         } else {
             setFormData({ ...formData, [e.target.name]: value });
+            if (e.target.name === 'section') {
+                setClasses([]);
+                setFormData(prev => ({ ...prev, section: value, study_class: '' }));
+                if (value) fetchClasses(value);
+            }
         }
     };
 
@@ -90,6 +133,38 @@ export default function CreateExam() {
                                         className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-background-light dark:bg-slate-900 text-slate-900 dark:text-white"
                                         placeholder="Brief instructions or summary for the students..."
                                     />
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Section</label>
+                                        <select
+                                            name="section"
+                                            value={formData.section}
+                                            onChange={handleChange}
+                                            className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                        >
+                                            <option value="">Select Section</option>
+                                            {sections.map(sec => (
+                                                <option key={sec.id} value={sec.id}>{sec.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Class</label>
+                                        <select
+                                            name="study_class"
+                                            value={formData.study_class}
+                                            onChange={handleChange}
+                                            className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                            disabled={!formData.section}
+                                        >
+                                            <option value="">Select Class</option>
+                                            {classes.map(cls => (
+                                                <option key={cls.id} value={cls.id}>{cls.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

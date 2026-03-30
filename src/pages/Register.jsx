@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import api from '../api/axios';
 
 export default function Register() {
@@ -13,6 +13,14 @@ export default function Register() {
     const [error, setError] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('role') === 'INSTRUCTOR') {
+            setFormData(prev => ({ ...prev, role: 'INSTRUCTOR' }));
+        }
+    }, [location.search]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -101,18 +109,31 @@ export default function Register() {
                             </div>
                         </div>
 
-
-
-                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Enrollment Number</label>
-                            <input
-                                type="text"
-                                name="enrollment_number"
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Account Type</label>
+                            <select
+                                name="role"
+                                value={formData.role}
                                 onChange={handleChange}
-                                className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
-                                placeholder="Optional"
-                            />
+                                className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                            >
+                                <option value="STUDENT">Student</option>
+                                <option value="INSTRUCTOR">Independent Instructor</option>
+                            </select>
                         </div>
+
+                        {formData.role === 'STUDENT' && (
+                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Enrollment Number</label>
+                                <input
+                                    type="text"
+                                    name="enrollment_number"
+                                    onChange={handleChange}
+                                    className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                                    placeholder="Optional"
+                                />
+                            </div>
+                        )}
 
                         <div className="pt-2">
                             <button

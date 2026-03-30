@@ -17,10 +17,11 @@ export default function GradingDashboard() {
     const fetchExams = async () => {
         try {
             const res = await api.get('exams/');
-            setExams(res.data);
-            if (res.data.length > 0) {
-                setSelectedExam(res.data[0].id);
-                fetchSubmissions(res.data[0].id);
+            const examsData = Array.isArray(res.data) ? res.data : (res.data.results || []);
+            setExams(examsData);
+            if (examsData.length > 0) {
+                setSelectedExam(examsData[0].id);
+                fetchSubmissions(examsData[0].id);
             } else {
                 setLoading(false);
             }
@@ -145,8 +146,8 @@ export default function GradingDashboard() {
                                             </td>
                                             <td className="py-4 px-6">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${sub.status === 'GRADED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                                        sub.status === 'SUBMITTED' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                            'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
+                                                    sub.status === 'SUBMITTED' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                        'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
                                                     }`}>
                                                     {sub.status}
                                                 </span>
@@ -160,8 +161,8 @@ export default function GradingDashboard() {
                                                 <button
                                                     onClick={() => navigate(`/exams/${selectedExam}/grade/${sub.id}`)}
                                                     className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors ${sub.status === 'GRADED'
-                                                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-white'
-                                                            : 'bg-primary hover:bg-primary/90 text-white shadow-primary/20'
+                                                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-white'
+                                                        : 'bg-primary hover:bg-primary/90 text-white shadow-primary/20'
                                                         }`}
                                                 >
                                                     <span className="material-symbols-outlined text-[16px]">

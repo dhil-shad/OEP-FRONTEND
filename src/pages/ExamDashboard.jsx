@@ -80,7 +80,7 @@ export default function ExamDashboard() {
                             {userRole === 'INSTRUCTOR' && profile?.associated_institution_name ? `${profile.associated_institution_name}` : 'Exams Dashboard'}
                         </h2>
                         <p className="text-slate-500 dark:text-slate-400">
-                            {userRole === 'INSTRUCTOR' ? `Welcome, Instructor (${profile?.department || 'General'})` : 'Manage and access your examinations.'}
+                            {userRole === 'INSTRUCTOR' ? `Welcome, Instructor (${profile?.department_name || 'General'})` : 'Manage and access your examinations.'}
                         </p>
                     </div>
                     {userRole === 'INSTRUCTOR' && (
@@ -142,7 +142,7 @@ export default function ExamDashboard() {
                                         <span className="material-symbols-outlined text-primary mt-0.5">school</span>
                                         <div>
                                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Department</div>
-                                            <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{profile?.department || 'General'}</div>
+                                            <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{profile?.department_name || 'General'}</div>
                                         </div>
                                     </div>
                                     <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl flex items-start gap-3">
@@ -177,7 +177,7 @@ export default function ExamDashboard() {
                         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
                             <div>
                                 <h3 className="text-xl font-black text-slate-900 dark:text-white">Department Students</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Enrolled students in {profile?.department || 'your department'}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Enrolled students in {profile?.department_name || 'your department'}</p>
                             </div>
                             <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold">
                                 {students.length} Students

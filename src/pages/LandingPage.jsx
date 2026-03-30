@@ -23,7 +23,7 @@ const LandingPage = () => {
 
                         <div className="flex items-center gap-3">
                             <Link to="/login" className="px-4 py-2 text-sm font-semibold hover:text-primary transition-colors">Login</Link>
-                            <Link to="/register" className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">Instructor Mode</Link>
+                            <Link to="/register?role=INSTRUCTOR" className="bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">Instructor Mode</Link>
                         </div>
                     </div>
                 </div>
@@ -297,7 +297,7 @@ const LandingPage = () => {
                     <div className="max-w-4xl mx-auto px-4 text-center">
                         <h2 className="text-4xl font-black mb-8">Ready to secure your institution's future?</h2>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Link to="/register" className="bg-primary text-white px-10 py-4 rounded-xl font-bold text-lg shadow-xl shadow-primary/30 hover:scale-105 transition-transform inline-block">Instructor Mode</Link>
+                            <Link to="/register?role=INSTRUCTOR" className="bg-primary text-white px-10 py-4 rounded-xl font-bold text-lg shadow-xl shadow-primary/30 hover:scale-105 transition-transform inline-block">Instructor Mode</Link>
                             <button className="bg-white dark:bg-slate-800 border border-primary/20 px-10 py-4 rounded-xl font-bold text-lg hover:bg-slate-50 transition-colors">Contact Sales</button>
                         </div>
                     </div>

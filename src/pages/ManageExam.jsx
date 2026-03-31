@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/axios';
 
 export default function ManageExam() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [exam, setExam] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -23,6 +24,10 @@ export default function ManageExam() {
 
     useEffect(() => {
         fetchExamDetails();
+        // If redirected from CreateExam, auto-open the question form
+        if (location.state?.openQuestionForm) {
+            setShowQuestionForm(true);
+        }
     }, [id]);
 
     const fetchExamDetails = async () => {
@@ -51,11 +56,16 @@ export default function ManageExam() {
     };
 
     const toggleActiveStatus = async () => {
+        // Block activation if exam has no questions
+        if (!exam.is_active && (!exam.questions || exam.questions.length === 0)) {
+            alert('Cannot activate this exam. Please add at least one question before activating.');
+            return;
+        }
         try {
             await api.patch(`exams/${id}/`, { is_active: !exam.is_active });
             setExam({ ...exam, is_active: !exam.is_active });
         } catch (err) {
-            alert('Failed to update exam status');
+            alert(err.response?.data?.detail || 'Failed to update exam status');
         }
     };
 

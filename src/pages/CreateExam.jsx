@@ -11,7 +11,7 @@ export default function CreateExam() {
         end_time: '',
         duration_minutes: 60,
         pass_percentage: 50,
-        is_active: true,
+        is_active: false,
         is_randomized: true,
         proctoring: {
             webcam_enabled: false,
@@ -81,8 +81,8 @@ export default function CreateExam() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('exams/', formData);
-            navigate('/dashboard');
+            const res = await api.post('exams/', formData);
+            navigate(`/exams/${res.data.id}`, { state: { openQuestionForm: true } });
         } catch (err) {
             setError(err.response?.data || 'Failed to create exam');
         }
@@ -135,37 +135,39 @@ export default function CreateExam() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Section</label>
-                                        <select
-                                            name="section"
-                                            value={formData.section}
-                                            onChange={handleChange}
-                                            className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                                        >
-                                            <option value="">Select Section</option>
-                                            {sections.map(sec => (
-                                                <option key={sec.id} value={sec.id}>{sec.name}</option>
-                                            ))}
-                                        </select>
+                                {userProfile?.associated_institution && (
+                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Section</label>
+                                            <select
+                                                name="section"
+                                                value={formData.section}
+                                                onChange={handleChange}
+                                                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                            >
+                                                <option value="">Select Section</option>
+                                                {sections.map(sec => (
+                                                    <option key={sec.id} value={sec.id}>{sec.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Class</label>
+                                            <select
+                                                name="study_class"
+                                                value={formData.study_class}
+                                                onChange={handleChange}
+                                                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                                                disabled={!formData.section}
+                                            >
+                                                <option value="">Select Class</option>
+                                                {classes.map(cls => (
+                                                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Class</label>
-                                        <select
-                                            name="study_class"
-                                            value={formData.study_class}
-                                            onChange={handleChange}
-                                            className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                                            disabled={!formData.section}
-                                        >
-                                            <option value="">Select Class</option>
-                                            {classes.map(cls => (
-                                                <option key={cls.id} value={cls.id}>{cls.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
+                                )}
 
                                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                     <div>
@@ -225,17 +227,7 @@ export default function CreateExam() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 bg-slate-50 dark:bg-slate-900/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
-                                    <div className="flex items-center justify-between">
-                                        <span className="flex flex-col">
-                                            <span className="text-sm font-bold text-slate-900 dark:text-white">Exam Active Status</span>
-                                            <span className="text-xs text-slate-500">Make this exam visible to candidates.</span>
-                                        </span>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" name="is_active" className="sr-only peer" checked={formData.is_active} onChange={handleChange} />
-                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
-                                        </label>
-                                    </div>
+                                <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
                                     <div className="flex items-center justify-between">
                                         <span className="flex flex-col">
                                             <span className="text-sm font-bold text-slate-900 dark:text-white">Randomize Questions</span>

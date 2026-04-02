@@ -16,6 +16,7 @@ export default function ManageExam() {
         marks: 1.0,
         options: [{ text: '', is_correct: false }, { text: '', is_correct: false }]
     });
+    const [editingQuestionId, setEditingQuestionId] = useState(null);
     const [emailsInput, setEmailsInput] = useState('');
     const [invitesLoading, setInvitesLoading] = useState(false);
 
@@ -33,10 +34,16 @@ export default function ManageExam() {
     const fetchExamDetails = async () => {
         try {
             const res = await api.get(`exams/${id}/`);
+            // Convert UTC ISO to local YYYY-MM-DDTHH:MM for the datetime-local input
+            const toLocalDatetime = (dateStr) => {
+                const d = new Date(dateStr);
+                const offset = d.getTimezoneOffset() * 60000;
+                return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+            };
             setExam({
                 ...res.data,
-                start_time: new Date(res.data.start_time).toISOString().slice(0, 16),
-                end_time: new Date(res.data.end_time).toISOString().slice(0, 16)
+                start_time: toLocalDatetime(res.data.start_time),
+                end_time: toLocalDatetime(res.data.end_time)
             });
             fetchAnalytics();
         } catch (err) {
@@ -56,13 +63,19 @@ export default function ManageExam() {
     };
 
     const toggleActiveStatus = async () => {
-        // Block activation if exam has no questions
+        // Block publishing if exam has no questions
         if (!exam.is_active && (!exam.questions || exam.questions.length === 0)) {
-            alert('Cannot activate this exam. Please add at least one question before activating.');
+            alert('Cannot publish this exam. Please add at least one question before publishing.');
             return;
         }
         try {
-            await api.patch(`exams/${id}/`, { is_active: !exam.is_active });
+            // When toggling, send the current local times back as UTC ISO strings
+            const updateData = {
+                is_active: !exam.is_active,
+                start_time: new Date(exam.start_time).toISOString(),
+                end_time: new Date(exam.end_time).toISOString()
+            };
+            await api.patch(`exams/${id}/`, updateData);
             setExam({ ...exam, is_active: !exam.is_active });
         } catch (err) {
             alert(err.response?.data?.detail || 'Failed to update exam status');
@@ -131,6 +144,41 @@ export default function ManageExam() {
         });
     };
 
+    const handleEditQuestion = (q) => {
+        setNewQuestion({
+            text: q.text,
+            question_type: q.question_type,
+            marks: q.marks,
+            options: q.options.map(opt => ({ ...opt })) // deep copy options
+        });
+        setEditingQuestionId(q.id);
+        setShowQuestionForm(true);
+        // Scroll to form
+        setTimeout(() => {
+            document.getElementById('question-form-scroll')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    };
+
+    const handleDeleteQuestion = async (qId) => {
+        if (!window.confirm("Are you sure you want to delete this question? This action cannot be undone.")) return;
+        try {
+            await api.delete(`exams/${id}/questions/${qId}/`);
+            fetchExamDetails();
+        } catch (err) {
+            alert('Failed to delete question');
+        }
+    };
+
+    const resetQuestionForm = () => {
+        setNewQuestion({
+            text: '',
+            question_type: 'MCQ',
+            marks: 1.0,
+            options: [{ text: '', is_correct: false }, { text: '', is_correct: false }]
+        });
+        setEditingQuestionId(null);
+    };
+
     const submitQuestion = async (e) => {
         e.preventDefault();
         try {
@@ -151,19 +199,19 @@ export default function ManageExam() {
                 payload.options = [];
             }
 
-            await api.post(`exams/${id}/questions/`, payload);
+            if (editingQuestionId) {
+                await api.patch(`exams/${id}/questions/${editingQuestionId}/`, payload);
+            } else {
+                await api.post(`exams/${id}/questions/`, payload);
+            }
+
             if (e.nativeEvent.submitter?.name !== 'save_add_another') {
                 setShowQuestionForm(false);
             }
             fetchExamDetails();
-            setNewQuestion({
-                text: '',
-                question_type: 'MCQ',
-                marks: 1.0,
-                options: [{ text: '', is_correct: false }, { text: '', is_correct: false }]
-            });
+            resetQuestionForm();
         } catch (err) {
-            alert('Failed to add question');
+            alert(editingQuestionId ? 'Failed to update question' : 'Failed to add question');
         }
     };
 
@@ -237,13 +285,47 @@ export default function ManageExam() {
                             <div>
                                 <span className="block text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">Status</span>
                                 <div className="flex items-center gap-3 h-8">
-                                    <span className={`text-lg font-bold ${exam.is_active ? 'text-green-500' : 'text-slate-400'}`}>
-                                        {exam.is_active ? 'Active' : 'Inactive'}
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider uppercase whitespace-nowrap ${exam.status === 'Live' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                        exam.status === 'Upcoming' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                            exam.status === 'Ended' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                                        }`}>
+                                        {exam.status}
                                     </span>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" className="sr-only peer" checked={exam.is_active} onChange={toggleActiveStatus} />
-                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-green-500"></div>
-                                    </label>
+                                    {exam.status !== 'Ended' && (
+                                        <div className="flex items-center gap-2 ml-auto">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Published</span>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" checked={exam.is_active} onChange={toggleActiveStatus} />
+                                                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+                            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl flex items-center gap-4">
+                                <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center shadow-sm">
+                                    <span className="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Start Time</span>
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                        {new Date(exam.start_time).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl flex items-center gap-4">
+                                <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center shadow-sm">
+                                    <span className="material-symbols-outlined text-rose-500">event_busy</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">End Time</span>
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                        {new Date(exam.end_time).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -442,18 +524,27 @@ export default function ManageExam() {
                 {/* Questions Section */}
                 <div className="flex justify-between items-center mb-6 mt-12">
                     <h3 className="text-2xl font-black text-slate-900 dark:text-white">Questions</h3>
-                    <button
-                        onClick={() => setShowQuestionForm(!showQuestionForm)}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all hover:-translate-y-0.5 ${showQuestionForm ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'}`}
-                    >
-                        {showQuestionForm ? 'Cancel' : '+ Add Question'}
-                    </button>
+                    {exam.status !== 'Ended' && (
+                        <button
+                            onClick={() => setShowQuestionForm(!showQuestionForm)}
+                            className={`px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all hover:-translate-y-0.5 ${showQuestionForm ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'}`}
+                        >
+                            {showQuestionForm ? 'Cancel' : '+ Add Question'}
+                        </button>
+                    )}
                 </div>
 
                 {showQuestionForm && (
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-600 mb-8 overflow-hidden">
-                        <div className="p-6 bg-slate-50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-700">
-                            <h4 className="font-bold text-lg text-slate-900 dark:text-white">New Question Form</h4>
+                    <div id="question-form-scroll" className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-600 mb-8 overflow-hidden">
+                        <div className="p-6 bg-slate-50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                            <h4 className="font-bold text-lg text-slate-900 dark:text-white">
+                                {editingQuestionId ? 'Edit Question' : 'New Question Form'}
+                            </h4>
+                            {editingQuestionId && (
+                                <button onClick={resetQuestionForm} className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-sm">close</span> Cancel Edit
+                                </button>
+                            )}
                         </div>
                         <div className="p-6">
                             <form onSubmit={submitQuestion}>
@@ -551,19 +642,21 @@ export default function ManageExam() {
                                 )}
 
                                 <div className="mt-8 flex justify-end gap-3">
-                                    <button
-                                        type="submit"
-                                        name="save_add_another"
-                                        className="px-6 py-3 bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                                    >
-                                        Save & Add Another
-                                    </button>
+                                    {!editingQuestionId && (
+                                        <button
+                                            type="submit"
+                                            name="save_add_another"
+                                            className="px-6 py-3 bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                        >
+                                            Save & Add Another
+                                        </button>
+                                    )}
                                     <button
                                         type="submit"
                                         name="save"
                                         className="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors"
                                     >
-                                        Save Question
+                                        {editingQuestionId ? 'Update Question' : 'Save Question'}
                                     </button>
                                 </div>
                             </form>
@@ -580,13 +673,31 @@ export default function ManageExam() {
                     ) : (
                         exam.questions?.map((q, idx) => (
                             <div key={q.id} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
-                                <div className="flex flex-wrap gap-2 mb-4">
+                                <div className="flex flex-wrap items-center gap-2 mb-4">
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 uppercase tracking-wider">
                                         Q{idx + 1} • {q.question_type}
                                     </span>
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 uppercase tracking-wider">
                                         {q.marks} Marks
                                     </span>
+                                    {exam.status !== 'Ended' && (
+                                        <div className="ml-auto flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleEditQuestion(q)}
+                                                className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 transition-all"
+                                                title="Edit Question"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">edit</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteQuestion(q.id)}
+                                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all"
+                                                title="Delete Question"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">delete</span>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <h5 className="text-lg font-medium text-slate-900 dark:text-white mb-4 whitespace-pre-wrap">{q.text}</h5>
 

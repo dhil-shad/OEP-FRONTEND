@@ -81,7 +81,12 @@ export default function CreateExam() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await api.post('exams/', formData);
+            const submissionData = {
+                ...formData,
+                start_time: new Date(formData.start_time).toISOString(),
+                end_time: new Date(formData.end_time).toISOString()
+            };
+            const res = await api.post('exams/', submissionData);
             navigate(`/exams/${res.data.id}`, { state: { openQuestionForm: true } });
         } catch (err) {
             setError(err.response?.data || 'Failed to create exam');

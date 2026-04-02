@@ -76,14 +76,14 @@ export default function Navbar() {
                                                     <span className="material-symbols-outlined text-[18px]">apartment</span>
                                                     <span className="text-sm font-bold">{profile.associated_institution_name}</span>
                                                 </div>
-                                                <Link to="/notifications" className="relative p-2 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">
+                                                <button onClick={() => navigate('/dashboard?tab=notifications')} className="relative p-2 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">
                                                     <span className="material-symbols-outlined">notifications</span>
                                                     {unreadCount > 0 && (
                                                         <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-slate-800">
                                                             {unreadCount}
                                                         </span>
                                                     )}
-                                                </Link>
+                                                </button>
                                                 <Link to="/profile" className="flex items-center gap-2 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                                                     <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500">
                                                         <span className="material-symbols-outlined">person</span>

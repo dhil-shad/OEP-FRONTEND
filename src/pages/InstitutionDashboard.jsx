@@ -11,7 +11,7 @@ const TABS = [
     { key: 'requests', label: 'Join Requests', icon: 'how_to_reg' },
     { key: 'instructors', label: 'Instructors', icon: 'school' },
     { key: 'profile', label: 'Profile', icon: 'account_circle' },
-    { key: 'invite', label: 'Send Invite', icon: 'mail' },
+    { key: 'notification', label: 'Notification', icon: 'notifications' },
 ];
 
 export default function InstitutionDashboard() {
@@ -25,8 +25,11 @@ export default function InstitutionDashboard() {
     const [showPromotionModal, setShowPromotionModal] = useState(null); // Stores student object
     const [selectedDept, setSelectedDept] = useState('');
     const [loading, setLoading] = useState(true);
-    const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteStatus, setInviteStatus] = useState(null);
+    const [notificationTitle, setNotificationTitle] = useState('');
+    const [notificationMessage, setNotificationMessage] = useState('');
+    const [recipientType, setRecipientType] = useState('ALL_STUDENTS'); // ALL_STUDENTS, ALL_INSTRUCTORS, SPECIFIC_STUDENT, SPECIFIC_INSTRUCTOR
+    const [selectedUserId, setSelectedUserId] = useState('');
+    const [notificationStatus, setNotificationStatus] = useState(null);
     const [newDept, setNewDept] = useState({ name: '', description: '' });
     const [deptStatus, setDeptStatus] = useState(null);
     const [requestFilter, setRequestFilter] = useState('STUDENT'); // 'STUDENT' or 'INSTRUCTOR'
@@ -137,15 +140,35 @@ export default function InstitutionDashboard() {
         }
     };
 
-    const handleSendInvite = async (e) => {
+    const handleSendNotification = async (e) => {
         e.preventDefault();
-        setInviteStatus(null);
+        setNotificationStatus(null);
+
+        const payload = {
+            title: notificationTitle,
+            message: notificationMessage
+        };
+
+        if (recipientType === 'ALL_STUDENTS') {
+            payload.target_role = 'STUDENT';
+        } else if (recipientType === 'ALL_INSTRUCTORS') {
+            payload.target_role = 'INSTRUCTOR';
+        } else {
+            if (!selectedUserId) {
+                alert('Please select a recipient.');
+                return;
+            }
+            payload.user = selectedUserId;
+        }
+
         try {
-            await api.post('users/invite/', { email: inviteEmail });
-            setInviteStatus({ type: 'success', message: `Invitation sent to ${inviteEmail}` });
-            setInviteEmail('');
+            await api.post('users/notifications/', payload);
+            setNotificationStatus({ type: 'success', message: 'Notification sent successfully!' });
+            setNotificationTitle('');
+            setNotificationMessage('');
+            setSelectedUserId('');
         } catch (err) {
-            setInviteStatus({ type: 'error', message: err.response?.data?.detail || 'Failed to send invitation.' });
+            setNotificationStatus({ type: 'error', message: err.response?.data?.detail || 'Failed to send notification.' });
         }
     };
 
@@ -688,39 +711,85 @@ export default function InstitutionDashboard() {
                     </div>
                 )}
 
-                {/* ─── SEND INVITE TAB ─── */}
-                {activeTab === 'invite' && (
+                {/* ─── NOTIFICATION TAB ─── */}
+                {activeTab === 'notification' && (
                     <div>
-                        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Send Invite</h2>
-                        <p className="text-slate-500 dark:text-slate-400 mb-8">Invite instructors to join your institution on OEP.</p>
+                        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Send Notification</h2>
+                        <p className="text-slate-500 dark:text-slate-400 mb-8">Send updates or announcements to your institution's members.</p>
 
-                        <div className="max-w-lg">
+                        <div className="max-w-2xl">
                             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-8">
-                                {inviteStatus && (
-                                    <div className={`mb-6 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-medium ${inviteStatus.type === 'success'
+                                {notificationStatus && (
+                                    <div className={`mb-6 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-medium ${notificationStatus.type === 'success'
                                         ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400'
                                         : 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400'
                                         }`}>
                                         <span className="material-symbols-outlined shrink-0 text-xl">
-                                            {inviteStatus.type === 'success' ? 'check_circle' : 'error'}
+                                            {notificationStatus.type === 'success' ? 'check_circle' : 'error'}
                                         </span>
-                                        {inviteStatus.message}
+                                        {notificationStatus.message}
                                     </div>
                                 )}
 
-                                <form onSubmit={handleSendInvite} className="space-y-5">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                            Instructor Email Address
-                                        </label>
+                                <form onSubmit={handleSendNotification} className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Recipient Type</label>
+                                            <select
+                                                value={recipientType}
+                                                onChange={(e) => {
+                                                    setRecipientType(e.target.value);
+                                                    setSelectedUserId('');
+                                                }}
+                                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-primary/20 transition-all text-slate-700 dark:text-slate-200 font-medium"
+                                            >
+                                                <option value="ALL_STUDENTS">All Students</option>
+                                                <option value="ALL_INSTRUCTORS">All Instructors</option>
+                                                <option value="SPECIFIC_STUDENT">Specific Student</option>
+                                                <option value="SPECIFIC_INSTRUCTOR">Specific Instructor</option>
+                                            </select>
+                                        </div>
+
+                                        {(recipientType === 'SPECIFIC_STUDENT' || recipientType === 'SPECIFIC_INSTRUCTOR') && (
+                                            <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Select {recipientType === 'SPECIFIC_STUDENT' ? 'Student' : 'Instructor'}</label>
+                                                <select
+                                                    value={selectedUserId}
+                                                    onChange={(e) => setSelectedUserId(e.target.value)}
+                                                    required
+                                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-primary/20 transition-all text-slate-700 dark:text-slate-200 font-medium"
+                                                >
+                                                    <option value="">Select user...</option>
+                                                    {(recipientType === 'SPECIFIC_STUDENT' ? students : instructors).map(user => (
+                                                        <option key={user.id} value={user.id}>{user.username} ({user.email})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Title</label>
                                         <input
-                                            type="email"
+                                            type="text"
                                             required
-                                            value={inviteEmail}
-                                            onChange={(e) => setInviteEmail(e.target.value)}
-                                            className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
-                                            placeholder="instructor@example.com"
+                                            value={notificationTitle}
+                                            onChange={(e) => setNotificationTitle(e.target.value)}
+                                            className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                                            placeholder="e.g., Important Announcement"
                                         />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Message Content</label>
+                                        <textarea
+                                            required
+                                            value={notificationMessage}
+                                            onChange={(e) => setNotificationMessage(e.target.value)}
+                                            rows="5"
+                                            className="block w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                                            placeholder="Write your message here..."
+                                        ></textarea>
                                     </div>
 
                                     <button
@@ -728,7 +797,7 @@ export default function InstitutionDashboard() {
                                         className="w-full flex items-center justify-center gap-2 bg-primary text-white py-3 px-4 rounded-xl font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-[1.02]"
                                     >
                                         <span className="material-symbols-outlined text-lg">send</span>
-                                        Send Invitation
+                                        Broadcast Notification
                                     </button>
                                 </form>
                             </div>

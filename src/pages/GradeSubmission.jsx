@@ -118,6 +118,29 @@ export default function GradeSubmission() {
                 </div>
             )}
 
+            {/* Webcam Recording Section */}
+            {submission.webcam_recording && (
+                <div className="mb-8 bg-white rounded-xl shadow-sm border-l-4 border-red-500 overflow-hidden">
+                    <div className="bg-red-50 px-6 py-4 border-b border-red-100 font-semibold text-red-800 flex items-center">
+                        <span className="material-symbols-outlined mr-2">videocam</span>
+                        Webcam Recording
+                    </div>
+                    <div className="p-6">
+                        <video
+                            controls
+                            className="w-full max-w-2xl mx-auto rounded-lg border border-gray-200 shadow-sm bg-black"
+                            src={submission.webcam_recording.startsWith('http') ? submission.webcam_recording : `http://localhost:8000${submission.webcam_recording}`}
+                        >
+                            Your browser does not support video playback.
+                        </video>
+                        <p className="text-center text-gray-500 text-sm mt-3 flex items-center justify-center gap-1">
+                            <span className="material-symbols-outlined text-sm">info</span>
+                            Compressed webcam footage captured during the exam session.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Answers Section */}
             {submission.answers.length === 0 ? (
                 <div className="bg-blue-50 text-blue-800 border-l-4 border-blue-500 p-4 rounded-md">

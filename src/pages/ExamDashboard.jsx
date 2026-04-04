@@ -18,7 +18,10 @@ export default function ExamDashboard() {
     const [notifyingStudent, setNotifyingStudent] = useState(null);
     const [notifTitle, setNotifTitle] = useState('');
     const [notifMessage, setNotifMessage] = useState('');
-    const [notifLoading, setNotifLoading] = useState(false);
+    const [sections, setSections] = useState([]);
+    const [classes, setClasses] = useState([]);
+    const [selectedSection, setSelectedSection] = useState('');
+    const [selectedClass, setSelectedClass] = useState('');
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -47,6 +50,7 @@ export default function ExamDashboard() {
                 setProfile(res.data);
                 if (res.data.associated_institution && res.data.role === 'INSTRUCTOR') {
                     fetchPendingRequests();
+                    fetchSections(res.data.department);
                 }
                 fetchNotifications();
             })
@@ -55,6 +59,39 @@ export default function ExamDashboard() {
         fetchExams();
         fetchStudents();
     }, []);
+
+    const fetchSections = async (deptId) => {
+        if (!deptId) return;
+        try {
+            const res = await api.get(`users/sections/?department_id=${deptId}`);
+            setSections(res.data);
+        } catch (err) {
+            console.error('Failed to fetch sections', err);
+        }
+    };
+
+    const fetchClasses = async (sectionId) => {
+        if (!sectionId) {
+            setClasses([]);
+            return;
+        }
+        try {
+            const res = await api.get(`users/classes/?section_id=${sectionId}`);
+            setClasses(res.data);
+        } catch (err) {
+            console.error('Failed to fetch classes', err);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedSection) {
+            fetchClasses(selectedSection);
+            setSelectedClass('');
+        } else {
+            setClasses([]);
+            setSelectedClass('');
+        }
+    }, [selectedSection]);
 
     const fetchNotifications = async () => {
         try {
@@ -269,66 +306,116 @@ export default function ExamDashboard() {
                         </div>
                     </div>
                 ) : userRole === 'INSTRUCTOR' && activeTab === 'students' ? (
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white">Department Students</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Enrolled students in {profile?.department_name || 'your department'}</p>
-                            </div>
-                            <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold">
-                                {students.length} Students
+                    <div className="space-y-6">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 dark:text-white">Department Students</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Enrolled students in {profile?.department_name || 'your department'}</p>
+                                </div>
+                                <div className="flex flex-wrap gap-4 items-center">
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Section:</label>
+                                        <select
+                                            value={selectedSection}
+                                            onChange={(e) => setSelectedSection(e.target.value)}
+                                            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 ring-primary transition-all"
+                                        >
+                                            <option value="">All Sections</option>
+                                            {sections.map(sec => (
+                                                <option key={sec.id} value={sec.id}>{sec.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Class:</label>
+                                        <select
+                                            value={selectedClass}
+                                            onChange={(e) => setSelectedClass(e.target.value)}
+                                            disabled={!selectedSection}
+                                            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 ring-primary transition-all disabled:opacity-50"
+                                        >
+                                            <option value="">All Classes</option>
+                                            {classes.map(cls => (
+                                                <option key={cls.id} value={cls.id}>{cls.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-xs font-black tracking-wider uppercase">
+                                        {students.filter(s =>
+                                            (!selectedSection || s.section === parseInt(selectedSection)) &&
+                                            (!selectedClass || s.study_class === parseInt(selectedClass))
+                                        ).length} Students
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        {students.length === 0 ? (
-                            <div className="text-center py-16">
-                                <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">groups</span>
-                                <p className="text-slate-500 dark:text-slate-400">No students found in your department yet.</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Name</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Enrollment ID</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Email</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                        {students.map(student => (
-                                            <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm">
-                                                            {student.username[0].toUpperCase()}
-                                                        </div>
-                                                        <span className="font-bold text-slate-700 dark:text-slate-200">{student.username}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <code className="bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded text-xs font-mono text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                                        {student.enrollment_number || 'N/A'}
-                                                    </code>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400 font-medium">
-                                                    {student.email}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                    <button
-                                                        onClick={() => setNotifyingStudent(student)}
-                                                        className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                                                        title="Send Notification"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[20px]">notifications_active</span>
-                                                    </button>
-                                                </td>
+
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                            {students.length === 0 ? (
+                                <div className="text-center py-16">
+                                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">groups</span>
+                                    <p className="text-slate-500 dark:text-slate-400">No students found in your department yet.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
+                                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Name</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Enrollment ID</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Section</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Class</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Email</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                            {students
+                                                .filter(s =>
+                                                    (!selectedSection || s.section === parseInt(selectedSection)) &&
+                                                    (!selectedClass || s.study_class === parseInt(selectedClass))
+                                                )
+                                                .map(student => (
+                                                    <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm">
+                                                                    {student.username[0].toUpperCase()}
+                                                                </div>
+                                                                <span className="font-bold text-slate-700 dark:text-slate-200">{student.username}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <code className="bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded text-xs font-mono text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                                                {student.enrollment_number || 'N/A'}
+                                                            </code>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600 dark:text-slate-400">
+                                                            {student.section_name || 'N/A'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className="px-2 py-1 bg-slate-100 dark:bg-slate-900/50 rounded text-[10px] font-black text-slate-500 uppercase tracking-widest">{student.study_class_name || 'N/A'}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400 font-medium">
+                                                            {student.email}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                            <button
+                                                                onClick={() => setNotifyingStudent(student)}
+                                                                className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                                                title="Send Notification"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[20px]">notifications_active</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ) : userRole === 'INSTRUCTOR' && activeTab === 'notifications' ? (
                     <div className="space-y-8">

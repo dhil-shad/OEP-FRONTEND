@@ -33,6 +33,13 @@ export default function InstitutionDashboard() {
     const [newDept, setNewDept] = useState({ name: '', description: '' });
     const [deptStatus, setDeptStatus] = useState(null);
     const [requestFilter, setRequestFilter] = useState('STUDENT'); // 'STUDENT' or 'INSTRUCTOR'
+
+    // Filtering states
+    const [sections, setSections] = useState([]);
+    const [classes, setClasses] = useState([]);
+    const [studentFilters, setStudentFilters] = useState({ dept: '', sec: '', cls: '' });
+    const [instructorFilters, setInstructorFilters] = useState({ dept: '', sec: '', cls: '' });
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -62,6 +69,33 @@ export default function InstitutionDashboard() {
         fetchStudents();
         fetchInstructors();
     }, [navigate]);
+
+    const fetchSections = async (deptId) => {
+        if (!deptId) {
+            setSections([]);
+            setClasses([]);
+            return;
+        }
+        try {
+            const res = await api.get(`users/sections/?department_id=${deptId}`);
+            setSections(res.data);
+        } catch (err) {
+            console.error('Failed to fetch sections', err);
+        }
+    };
+
+    const fetchClasses = async (sectionId) => {
+        if (!sectionId) {
+            setClasses([]);
+            return;
+        }
+        try {
+            const res = await api.get(`users/classes/?section_id=${sectionId}`);
+            setClasses(res.data);
+        } catch (err) {
+            console.error('Failed to fetch classes', err);
+        }
+    };
 
     const fetchStudents = async () => {
         try {
@@ -400,19 +434,32 @@ export default function InstitutionDashboard() {
 
                 {/* ─── INSTRUCTORS TAB ─── */}
                 {activeTab === 'instructors' && (
-                    <div>
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                            <div>
-                                <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-1">Instructors</h2>
-                                <p className="text-slate-500 dark:text-slate-400">View and manage your institution's instructors.</p>
+                    <div className="space-y-6">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-1">Instructors</h2>
+                                    <p className="text-slate-500 dark:text-slate-400">View and manage your institution's instructors.</p>
+                                </div>
+                                <div className="flex flex-wrap gap-3 items-center">
+                                    <select
+                                        value={instructorFilters.dept}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setInstructorFilters({ dept: val, sec: '', cls: '' });
+                                        }}
+                                        className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 ring-primary transition-all"
+                                    >
+                                        <option value="">All Departments</option>
+                                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </select>
+                                    <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-xs font-black tracking-wider uppercase">
+                                        {instructors.filter(i =>
+                                            (!instructorFilters.dept || i.department === parseInt(instructorFilters.dept))
+                                        ).length} Instructors
+                                    </div>
+                                </div>
                             </div>
-                            <button
-                                onClick={() => setActiveTab('invite')}
-                                className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:-translate-y-0.5"
-                            >
-                                <span className="material-symbols-outlined text-sm">person_add</span>
-                                Invite Instructor
-                            </button>
                         </div>
 
                         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -437,27 +484,30 @@ export default function InstitutionDashboard() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                            {instructors.map(instructor => (
-                                                <tr key={instructor.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-                                                                {instructor.username[0].toUpperCase()}
+                                            {instructors
+                                                .filter(i =>
+                                                    (!instructorFilters.dept || i.department === parseInt(instructorFilters.dept))
+                                                )
+                                                .map(instructor => (
+                                                    <tr key={instructor.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+                                                                    {instructor.username[0].toUpperCase()}
+                                                                </div>
+                                                                <span className="font-bold text-slate-700 dark:text-slate-200">{instructor.username}</span>
                                                             </div>
-                                                            <span className="font-bold text-slate-700 dark:text-slate-200">{instructor.username}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                                            <span className="material-symbols-outlined text-[14px]">domain</span>
-                                                            {instructor.department || 'General'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                                        {instructor.email}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                                                                {instructor.department_name || instructor.department || 'General'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                                            {instructor.email}
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -468,10 +518,57 @@ export default function InstitutionDashboard() {
 
                 {/* ─── STUDENTS TAB ─── */}
                 {activeTab === 'students' && (
-                    <div>
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-1">Enrolled Students</h2>
-                            <p className="text-slate-500 dark:text-slate-400">View and manage students currently linked to your institution.</p>
+                    <div className="space-y-6">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-1">Enrolled Students</h2>
+                                    <p className="text-slate-500 dark:text-slate-400">View and manage students currently linked to your institution.</p>
+                                </div>
+                                <div className="flex flex-wrap gap-3 items-center">
+                                    <select
+                                        value={studentFilters.dept}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setStudentFilters({ dept: val, sec: '', cls: '' });
+                                            fetchSections(val);
+                                        }}
+                                        className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 ring-primary transition-all"
+                                    >
+                                        <option value="">All Departments</option>
+                                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </select>
+                                    <select
+                                        value={studentFilters.sec}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setStudentFilters(f => ({ ...f, sec: val, cls: '' }));
+                                            fetchClasses(val);
+                                        }}
+                                        disabled={!studentFilters.dept}
+                                        className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 ring-primary transition-all disabled:opacity-50"
+                                    >
+                                        <option value="">All Sections</option>
+                                        {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                    <select
+                                        value={studentFilters.cls}
+                                        onChange={(e) => setStudentFilters(f => ({ ...f, cls: e.target.value }))}
+                                        disabled={!studentFilters.sec}
+                                        className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-1 ring-primary transition-all disabled:opacity-50"
+                                    >
+                                        <option value="">All Classes</option>
+                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                    <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-xs font-black tracking-wider uppercase">
+                                        {students.filter(s =>
+                                            (!studentFilters.dept || s.department === parseInt(studentFilters.dept)) &&
+                                            (!studentFilters.sec || s.section === parseInt(studentFilters.sec)) &&
+                                            (!studentFilters.cls || s.study_class === parseInt(studentFilters.cls))
+                                        ).length} Students
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {students.length === 0 ? (
@@ -498,73 +595,76 @@ export default function InstitutionDashboard() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                            {students.map(student => (
-                                                <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-xs font-bold">
-                                                                {student.username[0].toUpperCase()}
+                                            {students
+                                                .filter(s =>
+                                                    (!studentFilters.dept || s.department === parseInt(studentFilters.dept)) &&
+                                                    (!studentFilters.sec || s.section === parseInt(studentFilters.sec)) &&
+                                                    (!studentFilters.cls || s.study_class === parseInt(studentFilters.cls))
+                                                )
+                                                .map(student => (
+                                                    <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-xs font-bold">
+                                                                    {student.username[0].toUpperCase()}
+                                                                </div>
+                                                                <span className="font-bold text-slate-700 dark:text-slate-200">{student.username}</span>
                                                             </div>
-                                                            <span className="font-bold text-slate-700 dark:text-slate-200">{student.username}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <code className="bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded text-xs font-mono text-slate-600 dark:text-slate-400">
-                                                            {student.enrollment_number || 'N/A'}
-                                                        </code>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="flex flex-wrap gap-2">
-                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                                                <span className="material-symbols-outlined text-[14px]">domain</span>
-                                                                {student.department_name || student.department || 'General'}
-                                                            </span>
-                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-slate-50 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400">
-                                                                <span className="material-symbols-outlined text-[14px]">layers</span>
-                                                                {student.section_name || student.section || 'N/A'}
-                                                            </span>
-                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                                                <span className="material-symbols-outlined text-[14px]">class</span>
-                                                                {student.study_class_name || 'N/A'}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                                        {student.email}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setOpenMenu(openMenu === student.id ? null : student.id);
-                                                            }}
-                                                            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                                                        >
-                                                            <span className="material-symbols-outlined">more_vert</span>
-                                                        </button>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <code className="bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded text-xs font-mono text-slate-600 dark:text-slate-400">
+                                                                {student.enrollment_number || 'N/A'}
+                                                            </code>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                                                                    {student.department_name || student.department || 'General'}
+                                                                </span>
+                                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+                                                                    {student.section_name || student.section || 'N/A'}
+                                                                </span>
+                                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 uppercase tracking-widest">
+                                                                    {student.study_class_name || 'N/A'}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                                            {student.email}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setOpenMenu(openMenu === student.id ? null : student.id);
+                                                                }}
+                                                                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                                            >
+                                                                <span className="material-symbols-outlined">more_vert</span>
+                                                            </button>
 
-                                                        {openMenu === student.id && (
-                                                            <div className="absolute right-6 top-10 w-48 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                                                                <button
-                                                                    onClick={() => handleStudentAction(student.id, 'promote')}
-                                                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 text-left transition-colors"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-blue-500 text-lg">school</span>
-                                                                    Promote to Instructor
-                                                                </button>
-                                                                <div className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>
-                                                                <button
-                                                                    onClick={() => handleStudentAction(student.id, 'kick')}
-                                                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-left transition-colors"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-lg">person_remove</span>
-                                                                    Kick from Institution
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                            {openMenu === student.id && (
+                                                                <div className="absolute right-6 top-10 w-48 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-xl z-50 py-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                                                    <button
+                                                                        onClick={() => handleStudentAction(student.id, 'promote')}
+                                                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 text-left transition-colors"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-blue-500 text-lg">school</span>
+                                                                        Promote to Instructor
+                                                                    </button>
+                                                                    <div className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>
+                                                                    <button
+                                                                        onClick={() => handleStudentAction(student.id, 'kick')}
+                                                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-left transition-colors"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-lg">person_remove</span>
+                                                                        Kick from Institution
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                         </tbody>
                                     </table>
                                 </div>

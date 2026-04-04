@@ -25,6 +25,16 @@ export default function TakeExam() {
     const [mediaStream, setMediaStream] = useState(null);
     const [screenStream, setScreenStream] = useState(null);
     const videoRef = useRef(null);
+    const mediaRecorderRef = useRef(null);
+    const recordedChunksRef = useRef([]);
+
+    // Callback ref: fires the instant the <video> DOM node mounts
+    const webcamPreviewRef = (node) => {
+        if (node && mediaStream) {
+            node.srcObject = mediaStream;
+            node.play().catch(() => { });
+        }
+    };
 
     useEffect(() => {
         const token = localStorage.getItem('access');
@@ -51,6 +61,9 @@ export default function TakeExam() {
     }, [id]);
 
     const stopMediaStreams = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+        }
         if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
         if (screenStream) screenStream.getTracks().forEach(track => track.stop());
     };
@@ -76,39 +89,83 @@ export default function TakeExam() {
         }
     };
 
+    // Also handle when mediaStream changes after video is already mounted
+    useEffect(() => {
+        if (mediaStream && videoRef.current) {
+            videoRef.current.srcObject = mediaStream;
+            videoRef.current.play().catch(() => { });
+        }
+    }, [mediaStream]);
+
     const setupProctoring = async () => {
         setLoading(true);
-        try {
-            if (proctoringSettings.full_screen_enforced) {
+        let failed = false;
+
+        // Step 1: Fullscreen (non-blocking — don't fail the exam over it)
+        if (proctoringSettings.full_screen_enforced) {
+            try {
                 if (document.documentElement.requestFullscreen) {
                     await document.documentElement.requestFullscreen();
                 }
+            } catch (fsErr) {
+                console.warn('Fullscreen request failed, continuing:', fsErr);
             }
+        }
 
-            if (proctoringSettings.webcam_enabled) {
+        // Step 2: Webcam
+        if (proctoringSettings.webcam_enabled) {
+            try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 setMediaStream(stream);
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                }
-            }
 
-            if (proctoringSettings.screen_record_enabled) {
+                // Start recording with compression
+                try {
+                    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+                        ? 'video/webm;codecs=vp9'
+                        : 'video/webm';
+                    const recorder = new MediaRecorder(stream, {
+                        mimeType,
+                        videoBitsPerSecond: 200000 // 200kbps for compression
+                    });
+                    recordedChunksRef.current = [];
+                    recorder.ondataavailable = (e) => {
+                        if (e.data && e.data.size > 0) {
+                            recordedChunksRef.current.push(e.data);
+                        }
+                    };
+                    recorder.start(5000); // Record in 5-second chunks
+                    mediaRecorderRef.current = recorder;
+                } catch (recErr) {
+                    console.warn('MediaRecorder not available, skipping recording:', recErr);
+                }
+            } catch (camErr) {
+                console.error('Webcam access failed:', camErr);
+                alert("Webcam access was denied or blocked.\n\nPlease click the camera icon in your browser's address bar, allow access, then click 'I Agree, Start Now' again.");
+                setLoading(false);
+                failed = true;
+            }
+        }
+
+        // Step 3: Screen share
+        if (!failed && proctoringSettings.screen_record_enabled) {
+            try {
                 const sStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
                 setScreenStream(sStream);
-                // Listen for user stopping screen share manually
                 sStream.getVideoTracks()[0].onended = () => {
                     logActivity('Screen Share Stopped', { time: new Date().toISOString() });
                     alert("Screen sharing was stopped! This is a violation.");
                 };
+            } catch (screenErr) {
+                console.error('Screen share failed:', screenErr);
+                alert("Screen sharing was denied or cancelled.\n\nPlease click 'I Agree, Start Now' again and select a screen to share.");
+                setLoading(false);
+                failed = true;
             }
+        }
 
+        if (!failed) {
             setProctoringSetupDone(true);
             startExam();
-        } catch (err) {
-            console.error(err);
-            setError("Failed to setup proctoring. You must grant required permissions to continue.");
-            setLoading(false);
         }
     };
 
@@ -277,6 +334,30 @@ export default function TakeExam() {
         }
     };
 
+    const uploadRecording = async () => {
+        try {
+            // Stop the recorder and wait for final data
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                await new Promise((resolve) => {
+                    mediaRecorderRef.current.onstop = resolve;
+                    mediaRecorderRef.current.stop();
+                });
+            }
+
+            if (recordedChunksRef.current.length > 0) {
+                const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+                const formData = new FormData();
+                formData.append('recording', blob, `webcam_${id}_${Date.now()}.webm`);
+
+                await api.post(`exams/${id}/upload_recording/`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            }
+        } catch (err) {
+            console.error('Failed to upload recording', err);
+        }
+    };
+
     const submitExamManually = async () => {
         if (window.confirm("Are you sure you want to completely finish and submit the exam?")) {
             autoSubmitExam();
@@ -286,9 +367,14 @@ export default function TakeExam() {
     const autoSubmitExam = async () => {
         try {
             await api.post(`exams/${id}/submit_exam/`);
+            // Upload recording before cleanup
+            await uploadRecording();
+            // Stop all media streams (camera, screen share)
+            stopMediaStreams();
             alert("Exam submitted successfully!");
             navigate('/dashboard');
         } catch (err) {
+            stopMediaStreams();
             alert("Failed to submit exam.");
         }
     };
@@ -391,13 +477,13 @@ export default function TakeExam() {
                         <div className="flex items-center gap-3">
                             {mediaStream && (
                                 <div className="hidden md:block w-20 h-14 bg-black rounded-lg overflow-hidden border-2 border-primary shadow-sm">
-                                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                                    <video ref={(node) => { videoRef.current = node; webcamPreviewRef(node); }} autoPlay playsInline muted className="w-full h-full object-cover" />
                                 </div>
                             )}
                             {savingStatus && (
                                 <div className={`px-4 py-1.5 rounded-full font-semibold text-sm flex items-center shadow-sm ${savingStatus === 'Saved' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                        savingStatus === 'Error Saving' ? 'bg-red-100 text-red-800 border border-red-200' :
-                                            'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                                    savingStatus === 'Error Saving' ? 'bg-red-100 text-red-800 border border-red-200' :
+                                        'bg-yellow-100 text-yellow-800 border border-yellow-200'
                                     }`}>
                                     {savingStatus === 'Saving...' && <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-500 border-t-transparent mr-2"></div>}
                                     {savingStatus}
@@ -436,8 +522,8 @@ export default function TakeExam() {
                                                 key={opt.id}
                                                 onClick={() => handleOptionSelect(q.id, opt.id)}
                                                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group flex items-center ${isSelected
-                                                        ? 'bg-blue-50 border-primary shadow-sm'
-                                                        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                                                    ? 'bg-blue-50 border-primary shadow-sm'
+                                                    : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-4 flex-shrink-0 transition-colors ${isSelected ? 'border-primary bg-primary' : 'border-gray-300 group-hover:border-blue-400'

@@ -19,6 +19,8 @@ export default function ManageExam() {
     const [editingQuestionId, setEditingQuestionId] = useState(null);
     const [emailsInput, setEmailsInput] = useState('');
     const [invitesLoading, setInvitesLoading] = useState(false);
+    const [isEditingDetails, setIsEditingDetails] = useState(false);
+    const [editForm, setEditForm] = useState(null);
 
     // Analytics
     const [analytics, setAnalytics] = useState(null);
@@ -79,6 +81,46 @@ export default function ManageExam() {
             setExam({ ...exam, is_active: !exam.is_active });
         } catch (err) {
             alert(err.response?.data?.detail || 'Failed to update exam status');
+        }
+    };
+
+    const handleEditDetails = () => {
+        setEditForm({
+            title: exam.title,
+            description: exam.description,
+            duration_minutes: exam.duration_minutes,
+            pass_percentage: exam.pass_percentage,
+            start_time: exam.start_time,
+            end_time: exam.end_time,
+            proctoring: { ...exam.proctoring }
+        });
+        setIsEditingDetails(true);
+    };
+
+    const handleSaveDetails = async () => {
+        try {
+            const payload = {
+                ...editForm,
+                start_time: new Date(editForm.start_time).toISOString(),
+                end_time: new Date(editForm.end_time).toISOString()
+            };
+            const res = await api.patch(`exams/${id}/`, payload);
+
+            const toLocalDatetime = (dateStr) => {
+                const d = new Date(dateStr);
+                const offset = d.getTimezoneOffset() * 60000;
+                return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+            };
+
+            setExam({
+                ...res.data,
+                start_time: toLocalDatetime(res.data.start_time),
+                end_time: toLocalDatetime(res.data.end_time)
+            });
+            setIsEditingDetails(false);
+            fetchAnalytics();
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Failed to update exam details');
         }
     };
 
@@ -237,8 +279,29 @@ export default function ManageExam() {
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 pb-6 border-b border-slate-200 dark:border-slate-800 gap-4">
                     <div>
-                        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{exam.title}</h2>
-                        <p className="text-slate-500 dark:text-slate-400 max-w-2xl">{exam.description || 'No description provided.'}</p>
+                        {isEditingDetails ? (
+                            <div className="space-y-4 w-full lg:min-w-[600px]">
+                                <input
+                                    type="text"
+                                    value={editForm.title}
+                                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                    className="block w-full text-3xl font-black bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-900 dark:text-white outline-none focus:ring-2 ring-primary/50"
+                                    placeholder="Exam Title"
+                                />
+                                <textarea
+                                    value={editForm.description}
+                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                    className="block w-full text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 outline-none focus:ring-2 ring-primary/50"
+                                    placeholder="Exam Description"
+                                    rows={2}
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{exam.title}</h2>
+                                <p className="text-slate-500 dark:text-slate-400 max-w-2xl">{exam.description || 'No description provided.'}</p>
+                            </>
+                        )}
                         <div className="mt-4 flex flex-wrap items-center gap-3">
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300">
                                 Exam Code: {exam.unique_code}
@@ -267,16 +330,65 @@ export default function ManageExam() {
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 mb-8 overflow-hidden">
                     <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white">Exam Details</h3>
+                        {exam.status !== 'Ended' && !isEditingDetails && (
+                            <button
+                                onClick={handleEditDetails}
+                                className="flex items-center gap-2 text-primary hover:text-primary/80 font-bold text-sm transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-sm">edit</span>
+                                Edit Details
+                            </button>
+                        )}
+                        {isEditingDetails && (
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setIsEditingDetails(false)}
+                                    className="px-4 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveDetails}
+                                    className="px-4 py-1.5 rounded-lg bg-primary text-white font-bold text-sm shadow-sm hover:bg-primary/90 transition-all"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        )}
                     </div>
                     <div className="p-6">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                             <div>
                                 <span className="block text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">Duration</span>
-                                <span className="text-2xl font-black text-slate-900 dark:text-white">{exam.duration_minutes} <span className="text-sm font-bold text-slate-500 dark:text-slate-400">mins</span></span>
+                                {isEditingDetails ? (
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            value={editForm.duration_minutes}
+                                            onChange={(e) => setEditForm({ ...editForm, duration_minutes: parseInt(e.target.value) })}
+                                            className="w-20 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-lg font-black text-slate-900 dark:text-white outline-none focus:ring-1 ring-primary"
+                                        />
+                                        <span className="text-sm font-bold text-slate-500">mins</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-2xl font-black text-slate-900 dark:text-white">{exam.duration_minutes} <span className="text-sm font-bold text-slate-500 dark:text-slate-400">mins</span></span>
+                                )}
                             </div>
                             <div>
                                 <span className="block text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">Pass Percentage</span>
-                                <span className="text-2xl font-black text-slate-900 dark:text-white">{exam.pass_percentage}<span className="text-sm font-bold text-slate-500 dark:text-slate-400">%</span></span>
+                                {isEditingDetails ? (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="number"
+                                            value={editForm.pass_percentage}
+                                            onChange={(e) => setEditForm({ ...editForm, pass_percentage: parseFloat(e.target.value) })}
+                                            className="w-16 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-lg font-black text-slate-900 dark:text-white outline-none focus:ring-1 ring-primary"
+                                        />
+                                        <span className="text-lg font-black text-slate-900 dark:text-white">%</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-2xl font-black text-slate-900 dark:text-white">{exam.pass_percentage}<span className="text-sm font-bold text-slate-500 dark:text-slate-400">%</span></span>
+                                )}
                             </div>
                             <div>
                                 <span className="block text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">Total Questions</span>
@@ -310,22 +422,40 @@ export default function ManageExam() {
                                 <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center shadow-sm">
                                     <span className="material-symbols-outlined text-primary">calendar_today</span>
                                 </div>
-                                <div>
+                                <div className="flex-grow">
                                     <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Start Time</span>
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                                        {new Date(exam.start_time).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                                    </span>
+                                    {isEditingDetails ? (
+                                        <input
+                                            type="datetime-local"
+                                            value={editForm.start_time}
+                                            onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
+                                            className="w-full bg-transparent border-none p-0 text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-0"
+                                        />
+                                    ) : (
+                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                            {new Date(exam.start_time).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl flex items-center gap-4">
                                 <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center shadow-sm">
                                     <span className="material-symbols-outlined text-rose-500">event_busy</span>
                                 </div>
-                                <div>
+                                <div className="flex-grow">
                                     <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">End Time</span>
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                                        {new Date(exam.end_time).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                                    </span>
+                                    {isEditingDetails ? (
+                                        <input
+                                            type="datetime-local"
+                                            value={editForm.end_time}
+                                            onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
+                                            className="w-full bg-transparent border-none p-0 text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-0"
+                                        />
+                                    ) : (
+                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                            {new Date(exam.end_time).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -338,25 +468,70 @@ export default function ManageExam() {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
                                         <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Webcam Snapshots</span>
-                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${exam.proctoring.webcam_enabled ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
-                                            {exam.proctoring.webcam_enabled ? 'Enabled' : 'Disabled'}
-                                        </span>
+                                        {isEditingDetails ? (
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setEditForm({ ...editForm, proctoring: { ...editForm.proctoring, webcam_enabled: !editForm.proctoring.webcam_enabled } })}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${editForm.proctoring.webcam_enabled ? 'bg-rose-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}
+                                                >
+                                                    {editForm.proctoring.webcam_enabled ? 'Disable' : 'Enable'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${exam.proctoring.webcam_enabled ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                                {exam.proctoring.webcam_enabled ? 'Enabled' : 'Disabled'}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
                                         <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Screen Recording</span>
-                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${exam.proctoring.screen_record_enabled ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
-                                            {exam.proctoring.screen_record_enabled ? 'Enabled' : 'Disabled'}
-                                        </span>
+                                        {isEditingDetails ? (
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setEditForm({ ...editForm, proctoring: { ...editForm.proctoring, screen_record_enabled: !editForm.proctoring.screen_record_enabled } })}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${editForm.proctoring.screen_record_enabled ? 'bg-rose-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}
+                                                >
+                                                    {editForm.proctoring.screen_record_enabled ? 'Disable' : 'Enable'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${exam.proctoring.screen_record_enabled ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                                {exam.proctoring.screen_record_enabled ? 'Enabled' : 'Disabled'}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
                                         <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Full Screen Mode</span>
-                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${exam.proctoring.full_screen_enforced ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
-                                            {exam.proctoring.full_screen_enforced ? 'Enforced' : 'Relaxed'}
-                                        </span>
+                                        {isEditingDetails ? (
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setEditForm({ ...editForm, proctoring: { ...editForm.proctoring, full_screen_enforced: !editForm.proctoring.full_screen_enforced } })}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${editForm.proctoring.full_screen_enforced ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}
+                                                >
+                                                    {editForm.proctoring.full_screen_enforced ? 'Relax' : 'Enforce'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${exam.proctoring.full_screen_enforced ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                                {exam.proctoring.full_screen_enforced ? 'Enforced' : 'Relaxed'}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
                                         <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Violation Tolerance</span>
-                                        <span className="text-lg font-bold text-rose-500">{exam.proctoring.tolerance_count} <span className="text-sm font-semibold">Warnings</span></span>
+                                        {isEditingDetails ? (
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    value={editForm.proctoring.tolerance_count}
+                                                    onChange={(e) => setEditForm({ ...editForm, proctoring: { ...editForm.proctoring, tolerance_count: parseInt(e.target.value) } })}
+                                                    className="w-16 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-lg font-black text-slate-900 dark:text-white outline-none focus:ring-1 ring-primary"
+                                                />
+                                                <span className="text-xs font-bold text-slate-500 uppercase">Warns</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-lg font-bold text-rose-500">{exam.proctoring.tolerance_count} <span className="text-sm font-semibold">Warnings</span></span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

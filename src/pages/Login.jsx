@@ -15,6 +15,18 @@ export default function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(null);
+
+        if (!credentials.username.trim() || !credentials.password.trim()) {
+            setError('Please fill in all fields');
+            return;
+        }
+
+        if (credentials.username.length < 3) {
+            setError('Username must be at least 3 characters');
+            return;
+        }
+
         try {
             const response = await api.post('token/', credentials);
             localStorage.setItem('access', response.data.access);
@@ -26,7 +38,11 @@ export default function Login() {
                 navigate('/dashboard');
             }
         } catch (err) {
-            setError('Invalid credentials');
+            if (err.response?.status === 401) {
+                setError('Invalid username or password');
+            } else {
+                setError('Login failed. Please try again later.');
+            }
         }
     };
 
@@ -93,6 +109,11 @@ export default function Login() {
                                         {showPassword ? 'visibility_off' : 'visibility'}
                                     </span>
                                 </button>
+                            </div>
+                            <div className="flex items-center justify-end mt-2">
+                                <Link to="/forgot-password" size="sm" className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
+                                    Forgot Password?
+                                </Link>
                             </div>
                         </div>
 

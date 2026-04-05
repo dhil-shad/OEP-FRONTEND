@@ -17,6 +17,8 @@ import JoinInstitution from './pages/JoinInstitution'
 import Profile from './pages/Profile'
 import DepartmentDetails from './pages/DepartmentDetails'
 import SectionDetails from './pages/SectionDetails'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import './App.css'
 
 function App() {
@@ -44,6 +46,8 @@ function App() {
         <Route path="/exam/join/:code" element={<JoinExam />} />
         <Route path="/join-institution" element={<JoinInstitution />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
       </Routes>
     </>
   )

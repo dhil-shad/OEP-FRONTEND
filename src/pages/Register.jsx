@@ -28,11 +28,50 @@ export default function Register() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(null);
+
+        // Client-side validation
+        if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim()) {
+            setError('Please fill in all required fields');
+            return;
+        }
+
+        if (formData.username.length < 3) {
+            setError('Username must be at least 3 characters long');
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            setError('Please enter a valid email address');
+            return;
+        }
+
+        if (formData.password.length < 8) {
+            setError('Password must be at least 8 characters long');
+            return;
+        }
+
         try {
             await api.post('users/register/', formData);
             navigate('/login');
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed. Check inputs.');
+            const data = err.response?.data;
+            if (data) {
+                // Handle DRF validation errors
+                const firstError = Object.values(data)[0];
+                if (Array.isArray(firstError)) {
+                    setError(firstError[0]);
+                } else if (typeof firstError === 'string') {
+                    setError(firstError);
+                } else if (data.detail) {
+                    setError(data.detail);
+                } else {
+                    setError('Registration failed. Please check your inputs.');
+                }
+            } else {
+                setError('Registration failed. Please try again later.');
+            }
         }
     };
 

@@ -14,6 +14,7 @@ import GradingDashboard from './pages/GradingDashboard'
 import GradeSubmission from './pages/GradeSubmission'
 import JoinExam from './pages/JoinExam'
 import JoinInstitution from './pages/JoinInstitution'
+import JoinInstitutionInstructor from './pages/JoinInstitutionInstructor'
 import Profile from './pages/Profile'
 import DepartmentDetails from './pages/DepartmentDetails'
 import SectionDetails from './pages/SectionDetails'
@@ -45,6 +46,7 @@ function App() {
         <Route path="/exams/:examId/grade/:subId" element={<GradeSubmission />} />
         <Route path="/exam/join/:code" element={<JoinExam />} />
         <Route path="/join-institution" element={<JoinInstitution />} />
+        <Route path="/instructor/join-institution" element={<JoinInstitutionInstructor />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />

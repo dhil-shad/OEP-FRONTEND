@@ -194,12 +194,18 @@ export default function ExamDashboard() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                     <div>
-                        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-1">
-                            {userRole === 'INSTRUCTOR' && profile?.associated_institution_name ? `${profile.associated_institution_name}` : 'Exams Dashboard'}
-                        </h2>
                         <p className="text-slate-500 dark:text-slate-400">
                             {userRole === 'INSTRUCTOR' ? `Welcome, Instructor (${profile?.department_name || 'General'})` : 'Manage and access your examinations.'}
                         </p>
+                        {userRole === 'INSTRUCTOR' && !profile?.associated_institution && (
+                            <button
+                                onClick={() => navigate('/instructor/join-institution')}
+                                className="mt-4 flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-xl font-bold text-sm shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all hover:scale-[1.02]"
+                            >
+                                <span className="material-symbols-outlined text-sm">apartment</span>
+                                Join an Institution
+                            </button>
+                        )}
                     </div>
                     {userRole === 'INSTRUCTOR' && (
                         <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-700">
@@ -292,15 +298,6 @@ export default function ExamDashboard() {
                                             <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{profile?.uid}</div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 flex gap-4">
-                                    <button
-                                        onClick={() => navigate('/profile')}
-                                        className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
-                                    >
-                                        Edit Full Profile
-                                        <span className="material-symbols-outlined text-sm">open_in_new</span>
-                                    </button>
                                 </div>
                             </div>
                         </div>

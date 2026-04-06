@@ -98,6 +98,21 @@ export default function Navbar() {
                                         )}
                                     </div>
                                 )}
+                                {userRole === 'INSTRUCTOR' && !profile?.associated_institution && (
+                                    <Link to="/instructor/join-institution" className="text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+                                        <span className="material-symbols-outlined text-[16px] text-primary">apartment</span>
+                                        Join Institution
+                                    </Link>
+                                )}
+                                {(userRole === 'INSTRUCTOR' || userRole === 'INSTITUTION') && profile?.associated_institution && (
+                                    <div className="flex items-center gap-4">
+                                        <Link to="/profile" className="flex items-center gap-2 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                            <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500">
+                                                <span className="material-symbols-outlined">person</span>
+                                            </div>
+                                        </Link>
+                                    </div>
+                                )}
                                 <button onClick={handleLogout} className="px-4 py-2 text-sm font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors">
                                     Logout
                                 </button>
